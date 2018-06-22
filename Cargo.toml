@@ -1,0 +1,12 @@
+[package]
+name = "project"
+version = "0.0.2"
+authors = ["Magnus Ulimoen <flymagnus@gmail.com>"]
+
+[dependencies]
+glium = "*"
+cgmath = "*"
+imgui = { git = "https://github.com/Gekkio/imgui-rs" }
+imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs" }
+vtk-parser = { path = "VTKparser" }
+arcball = "*"
