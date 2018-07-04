@@ -1,6 +1,6 @@
 # RayCaster
 
-This program implements a simple raytracer in OpenGL using [Glium](https://github.com/tomaka/glium). See also abstract.pdf for a short description of the program.
+This program implements a simple raytracer in OpenGL using [Glium](https://github.com/tomaka/glium). See also the [abstract](abstract.pdf)(PDF) for a short description of the program.
 
 ## Features
  * Maximum Intensity Projection
@@ -12,7 +12,7 @@ This program implements a simple raytracer in OpenGL using [Glium](https://githu
  * Rotate and translate camera using [Arcball](https://github.com/Twinklebear/arcball)
 
 
-## Installation
+## Building
 cargo build --release
 
 ## Running
