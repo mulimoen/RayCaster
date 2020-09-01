@@ -1,6 +1,5 @@
-use fmt;
 use std::error::Error;
-use std::{io, num};
+use std::{fmt, io, num};
 
 #[derive(Debug)]
 pub enum VTKparseError {

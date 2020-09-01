@@ -2,5 +2,6 @@
 name = "vtk-parser"
 version = "0.0.2"
 authors = ["Magnus Ulimoen <flymagnus@gmail.com>"]
+edition = "2018"
 
 [dependencies]

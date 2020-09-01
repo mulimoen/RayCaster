@@ -1,3 +1,5 @@
+use glium::implement_vertex;
+
 #[derive(Copy, Clone)]
 pub struct CubeVertex {
     pos: (f32, f32, f32),

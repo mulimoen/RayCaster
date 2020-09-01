@@ -1,3 +1,5 @@
+use glium::implement_vertex;
+
 #[derive(Copy, Clone)]
 pub struct QuadVertex {
     pos: (f32, f32),

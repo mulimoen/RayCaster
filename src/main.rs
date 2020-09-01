@@ -1,21 +1,10 @@
-#[macro_use]
-extern crate glium;
-extern crate cgmath;
-#[macro_use]
-extern crate imgui;
-extern crate imgui_glium_renderer;
-
-extern crate arcball;
-
-extern crate vtk_parser;
-
 use cgmath::Matrix4;
-
+use glium::{
+    texture::{Texture2d, Texture3d},
+    uniform, IndexBuffer, Program, Surface, VertexBuffer,
+};
+use imgui::im_str;
 use imgui_glium_renderer::Renderer;
-
-use glium::texture::{Texture2d, Texture3d};
-use glium::Surface;
-use glium::{IndexBuffer, Program, VertexBuffer};
 
 mod cube;
 mod raycast;

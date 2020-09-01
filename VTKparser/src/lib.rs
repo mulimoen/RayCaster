@@ -1,7 +1,6 @@
-use std::fmt;
 use std::fs::File;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::Path;
 
 pub use error::VTKparseError;
@@ -41,7 +40,6 @@ pub enum DatasetAttributes {
     FieldData,
 }
 
-
 impl Data {
     pub fn structured_points(&self) -> Option<&StructuredPoints> {
         if let Datatype::StructuredPoints(ref x) = self.dataset {
@@ -71,23 +69,26 @@ pub fn read_file<P: AsRef<Path>>(file: P) -> Result<Data, VTKparseError> {
     } else if file_format == "BINARY\n" {
         Ok(true)
     } else {
-        Err(VTKparseError::FileFormat("Format is not ASCII or BINARY".to_string()))
+        Err(VTKparseError::FileFormat(
+            "Format is not ASCII or BINARY".to_string(),
+        ))
     }?;
 
-
     Ok(Data {
-           header: Header {
-               file_version: version,
-               header: header,
-               binary: binary,
-           },
-           dataset: dataset_parse(reader, binary)?,
-       })
+        header: Header {
+            file_version: version,
+            header: header,
+            binary: binary,
+        },
+        dataset: dataset_parse(reader, binary)?,
+    })
 }
 
 fn get_version(version: &str) -> Result<(usize, usize), VTKparseError> {
     if !version.starts_with("# vtk DataFile Version ") {
-        return Err(VTKparseError::UnknownFormat("Identifier is not recognized".to_string()));
+        return Err(VTKparseError::UnknownFormat(
+            "Identifier is not recognized".to_string(),
+        ));
     }
 
     let mut v = version
@@ -100,10 +101,10 @@ fn get_version(version: &str) -> Result<(usize, usize), VTKparseError> {
     Ok((d0.parse()?, d1.parse()?))
 }
 
-fn dataset_parse<R: Read>(mut reader: BufReader<R>,
-                          binary: bool)
-                          -> Result<Datatype, VTKparseError> {
-
+fn dataset_parse<R: Read>(
+    mut reader: BufReader<R>,
+    binary: bool,
+) -> Result<Datatype, VTKparseError> {
     let mut dataset = String::new();
     reader.read_line(&mut dataset)?;
 
@@ -111,14 +112,13 @@ fn dataset_parse<R: Read>(mut reader: BufReader<R>,
         return Ok(Datatype::Empty);
     }
 
-    let vtk_type = dataset
-        .split_whitespace()
-        .last()
-        .unwrap()
-        .to_uppercase();
+    let vtk_type = dataset.split_whitespace().last().unwrap().to_uppercase();
 
     if vtk_type == "STRUCTURED_POINTS" {
-        Ok(Datatype::StructuredPoints(spoints::parse(&mut reader, binary)?))
+        Ok(Datatype::StructuredPoints(spoints::parse(
+            &mut reader,
+            binary,
+        )?))
     } else if vtk_type == "STRUCTURED_GRID" {
         Ok(Datatype::StructuredGrid)
     } else if vtk_type == "RECTILINEAR_GRID" {
@@ -130,6 +130,8 @@ fn dataset_parse<R: Read>(mut reader: BufReader<R>,
     } else if vtk_type == "FIELD" {
         Ok(Datatype::Field)
     } else {
-        Err(VTKparseError::FileFormat("Unknown dataset type".to_string()))
+        Err(VTKparseError::FileFormat(
+            "Unknown dataset type".to_string(),
+        ))
     }
 }
