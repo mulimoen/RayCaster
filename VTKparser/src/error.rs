@@ -1,6 +1,6 @@
+use fmt;
 use std::error::Error;
 use std::{io, num};
-use fmt;
 
 #[derive(Debug)]
 pub enum VTKparseError {
@@ -28,27 +28,15 @@ impl fmt::Display for VTKparseError {
 }
 
 impl Error for VTKparseError {
-    fn description(&self) -> &str {
-        match *self {
-            VTKparseError::Io(ref err) => err.description(),
-            VTKparseError::ParseInt(ref err) => err.description(),
-            VTKparseError::ParseFloat(ref err) => err.description(),
-            VTKparseError::FileFormat(ref err) |
-            VTKparseError::NotImplemented(ref err) |
-            VTKparseError::UnknownFormat(ref err) |
-            VTKparseError::WrongFormat(ref err) => err,
-        }
-    }
-
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             VTKparseError::Io(ref err) => Some(err),
             VTKparseError::ParseInt(ref err) => Some(err),
             VTKparseError::ParseFloat(ref err) => Some(err),
-            VTKparseError::FileFormat(_) |
-            VTKparseError::NotImplemented(_) |
-            VTKparseError::UnknownFormat(_) |
-            VTKparseError::WrongFormat(_) => None,
+            VTKparseError::FileFormat(_)
+            | VTKparseError::NotImplemented(_)
+            | VTKparseError::UnknownFormat(_)
+            | VTKparseError::WrongFormat(_) => None,
         }
     }
 }
