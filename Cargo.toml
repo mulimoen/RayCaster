@@ -10,3 +10,6 @@ imgui = "0.4.0"
 imgui-glium-renderer = "0.4.0"
 vtk-parser = { path = "VTKparser" }
 arcball = "1.0.0"
+
+[workspace]
+members = [".", "VTKparser"]
