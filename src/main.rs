@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate glium;
 extern crate cgmath;
-#[macro_use]
-extern crate imgui;
-extern crate imgui_glium_renderer;
+// TODO #[macro_use]
+// TODO extern crate imgui;
+// TODO extern crate imgui_glium_renderer;
 
 extern crate arcball;
 
@@ -11,7 +11,7 @@ extern crate vtk_parser;
 
 use cgmath::Matrix4;
 
-use imgui_glium_renderer::Renderer;
+// TODO use imgui_glium_renderer::Renderer;
 
 use glium::texture::{Texture2d, Texture3d};
 use glium::Surface;
@@ -22,8 +22,8 @@ mod raycast;
 mod support;
 
 fn main() {
-    let mut events_loop = glium::glutin::EventsLoop::new();
-    let window = glium::glutin::WindowBuilder::new();
+    let mut events_loop = glium::glutin::event_loop::EventLoop::new();
+    let window = glium::glutin::window::WindowBuilder::new();
     let context = glium::glutin::ContextBuilder::new()
         .with_vsync(true)
         .with_depth_buffer(24);
@@ -40,7 +40,8 @@ fn main() {
         &display,
         glium::index::PrimitiveType::TrianglesList,
         &cube::INDICES,
-    ).unwrap();
+    )
+    .unwrap();
     let cube_prog =
         Program::from_source(&display, cube::VERT_SHADER, cube::FRAG_SHADER, None).unwrap();
 
@@ -49,7 +50,8 @@ fn main() {
         &display,
         glium::index::PrimitiveType::TrianglesList,
         &raycast::INDICES,
-    ).unwrap();
+    )
+    .unwrap();
     let quad_prog =
         Program::from_source(&display, raycast::VERT_SHADER, raycast::FRAG_SHADER, None)
             .expect("Could not compile fragment shader");
@@ -60,20 +62,16 @@ fn main() {
         glium::texture::MipmapsOption::NoMipmap,
         1024,
         1024,
-    ).unwrap();
+    )
+    .unwrap();
 
     let depth_tex_back = glium::framebuffer::DepthRenderBuffer::new(
         &display,
         glium::texture::DepthFormat::F32,
         1024,
         1024,
-    ).unwrap();
-
-    let mut backface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-        &display,
-        &backface_tex,
-        &depth_tex_back,
-    ).unwrap();
+    )
+    .unwrap();
 
     let frontface_tex = Texture2d::empty_with_format(
         &display,
@@ -81,18 +79,15 @@ fn main() {
         glium::texture::MipmapsOption::NoMipmap,
         1024,
         1024,
-    ).unwrap();
+    )
+    .unwrap();
     let depth_tex_front = glium::framebuffer::DepthRenderBuffer::new(
         &display,
         glium::texture::DepthFormat::F32,
         1024,
         1024,
-    ).unwrap();
-    let mut frontface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-        &display,
-        &frontface_tex,
-        &depth_tex_front,
-    ).unwrap();
+    )
+    .unwrap();
 
     let noise_tex = {
         let random_bytes = include_bytes!("random.bin").to_vec();
@@ -107,7 +102,8 @@ fn main() {
             },
             glium::texture::UncompressedFloatFormat::U8,
             glium::texture::MipmapsOption::NoMipmap,
-        ).unwrap()
+        )
+        .unwrap()
     };
 
     let (volume_tex, names) = {
@@ -180,19 +176,29 @@ fn main() {
     let mut imgui = imgui::ImGui::init();
     imgui.set_mouse_pos(0.0, 0.0);
 
-    let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
+    // TODO let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
 
     let mut last_frame = std::time::Instant::now();
 
-    let mut closed = false;
-    while !closed {
-        events_loop.poll_events(|ev| {
-            if input.handle(ev) {
-                closed = true;
-            }
-        });
+    events_loop.run(move |ev, _, cf| {
+        if input.handle(ev) {
+            *cf = glium::glutin::event_loop::ControlFlow::Exit
+        }
 
-        input.pass_to_imgui(&mut imgui);
+        let mut backface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+            &display,
+            &backface_tex,
+            &depth_tex_back,
+        )
+        .unwrap();
+        let mut frontface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+            &display,
+            &frontface_tex,
+            &depth_tex_front,
+        )
+        .unwrap();
+
+        // TODO input.pass_to_imgui(&mut imgui);
 
         let view = input.view_matrix();
 
@@ -219,7 +225,7 @@ fn main() {
                 (&cube_pos, cube_models.per_instance().unwrap()),
                 &cube_ind,
                 &cube_prog,
-                &uniform!{ u_mvp : vp },
+                &uniform! { u_mvp : vp },
                 &params,
             )
             .unwrap();
@@ -240,7 +246,7 @@ fn main() {
                 (&cube_pos, cube_models.per_instance().unwrap()),
                 &cube_ind,
                 &cube_prog,
-                &uniform!{ u_mvp : vp },
+                &uniform! { u_mvp : vp },
                 &params,
             )
             .unwrap();
@@ -256,7 +262,7 @@ fn main() {
             ..Default::default()
         };
 
-        let uniforms = uniform!{
+        let uniforms = uniform! {
             u_back : &backface_tex,
             u_front: &frontface_tex,
             u_volume: volume_tex[selection].sampled().wrap_function(glium::uniforms::SamplerWrapFunction::Clamp).magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
@@ -287,23 +293,21 @@ fn main() {
             .unwrap();
 
         // The following part is all related to Dear ImGui
-        let window = display.gl_window();
-        let size_pixels = window.get_inner_size().unwrap();
-        let hdipi = window.hidpi_factor();
-        let size_points = (
-            (size_pixels.0 as f32 / hdipi) as u32,
-            (size_pixels.1 as f32 / hdipi) as u32,
-        );
+        let w = display.gl_window();
+        let window = w.window();
+        let size_pixels = window.inner_size();
+        let size_points = window.outer_size();
 
         let now = std::time::Instant::now();
 
         let dt = now - last_frame;
         last_frame = now;
 
+        /*
         let frame_rate = imgui.get_frame_rate();
         let ui = imgui.frame(
-            size_points,
-            size_pixels,
+            (size_points.width, size_points.height),
+            (size_pixels.width, size_pixels.height),
             dt.as_secs() as f32 + dt.subsec_nanos() as f32 * 1e-9,
         );
 
@@ -375,7 +379,8 @@ fn main() {
                         &mut grad_step,
                         0.0,
                         1.0 / 10.0,
-                    ).build();
+                    )
+                    .build();
 
                     ui.separator();
 
@@ -403,18 +408,21 @@ fn main() {
                         &mut light[0],
                         0.0,
                         std::f32::consts::PI,
-                    ).build();
+                    )
+                    .build();
                     ui.slider_float(
                         im_str!("Light vector phi"),
                         &mut light[1],
                         0.0,
                         2.0 * std::f32::consts::PI,
-                    ).build();
+                    )
+                    .build();
                 }
             });
+        */
 
-        renderer.render(&mut target, ui).unwrap();
+        // TODO renderer.render(&mut target, ui).unwrap();
 
         target.finish().unwrap();
-    }
+    })
 }

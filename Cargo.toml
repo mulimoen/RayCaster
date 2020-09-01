@@ -4,7 +4,7 @@ version = "0.0.2"
 authors = ["Magnus Ulimoen <flymagnus@gmail.com>"]
 
 [dependencies]
-glium = "*"
+glium = "0.27.0"
 cgmath = "0.17.0"
 imgui = { git = "https://github.com/Gekkio/imgui-rs" }
 imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs" }
