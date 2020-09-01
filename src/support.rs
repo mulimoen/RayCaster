@@ -58,11 +58,16 @@ impl Support {
             ),
         }
     }
-    pub fn handle(&mut self, ev: Event<()>) -> bool {
+    pub fn handle(
+        &mut self,
+        ev: Event<()>,
+        cf: &mut glium::glutin::event_loop::ControlFlow,
+    ) -> bool {
         use glium::glutin::event::WindowEvent::*;
         if let glium::glutin::event::Event::WindowEvent { event, .. } = ev {
             match event {
                 CloseRequested | Destroyed => {
+                    *cf = glium::glutin::event_loop::ControlFlow::Exit;
                     return true;
                 }
                 MouseInput { state, button, .. } => match button {
@@ -150,17 +155,15 @@ impl Support {
         self.mouse_wheel = 0.0;
     }
 
-    /* TODO
-    pub fn pass_to_imgui(&mut self, imgui: &mut imgui::ImGui) {
-        imgui.set_mouse_pos(self.mouse_pos.0 as f32, self.mouse_pos.1 as f32);
-        imgui.set_mouse_down(&[self.pressed.0, self.pressed.1, self.pressed.2, false, false]);
+    pub fn pass_to_imgui(&mut self, imgui: &mut imgui::Io) {
+        imgui.mouse_pos = [self.mouse_pos.0 as f32, self.mouse_pos.1 as f32];
+        imgui.mouse_down = [self.pressed.0, self.pressed.1, self.pressed.2, false, false];
         for e in &self.keys_pressed {
             imgui.add_input_character(*e);
         }
-        imgui.set_mouse_wheel(self.mouse_wheel);
+        imgui.mouse_wheel = self.mouse_wheel;
         self.clear();
     }
-    */
 
     pub fn view_matrix(&self) -> cgmath::Matrix4<f32> {
         self.arcball_camera.get_mat4()

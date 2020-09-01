@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate glium;
 extern crate cgmath;
-// TODO #[macro_use]
-// TODO extern crate imgui;
-// TODO extern crate imgui_glium_renderer;
+#[macro_use]
+extern crate imgui;
+extern crate imgui_glium_renderer;
 
 extern crate arcball;
 
@@ -11,7 +11,7 @@ extern crate vtk_parser;
 
 use cgmath::Matrix4;
 
-// TODO use imgui_glium_renderer::Renderer;
+use imgui_glium_renderer::Renderer;
 
 use glium::texture::{Texture2d, Texture3d};
 use glium::Surface;
@@ -22,7 +22,7 @@ mod raycast;
 mod support;
 
 fn main() {
-    let mut events_loop = glium::glutin::event_loop::EventLoop::new();
+    let events_loop = glium::glutin::event_loop::EventLoop::new();
     let window = glium::glutin::window::WindowBuilder::new();
     let context = glium::glutin::ContextBuilder::new()
         .with_vsync(true)
@@ -173,17 +173,25 @@ fn main() {
 
     let mut perspective_selection = 0;
 
-    let mut imgui = imgui::ImGui::init();
-    imgui.set_mouse_pos(0.0, 0.0);
+    let mut imgui = imgui::Context::create();
+    imgui.io_mut().mouse_pos = [0.0, 0.0];
 
-    // TODO let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
+    let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
 
     let mut last_frame = std::time::Instant::now();
 
     events_loop.run(move |ev, _, cf| {
-        if input.handle(ev) {
-            *cf = glium::glutin::event_loop::ControlFlow::Exit
+        if input.handle(ev, cf) {
+            return
         }
+        let now = std::time::Instant::now();
+        let dt = now - last_frame;
+        if dt < std::time::Duration::from_millis(50) {
+            *cf = glium::glutin::event_loop::ControlFlow::Poll;
+            return;
+        }
+        *cf = glium::glutin::event_loop::ControlFlow::Wait;
+        last_frame = now;
 
         let mut backface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
             &display,
@@ -198,7 +206,7 @@ fn main() {
         )
         .unwrap();
 
-        // TODO input.pass_to_imgui(&mut imgui);
+        input.pass_to_imgui(imgui.io_mut());
 
         let view = input.view_matrix();
 
@@ -296,35 +304,26 @@ fn main() {
         let w = display.gl_window();
         let window = w.window();
         let size_pixels = window.inner_size();
-        let size_points = window.outer_size();
 
-        let now = std::time::Instant::now();
 
-        let dt = now - last_frame;
-        last_frame = now;
+        let frame_rate = imgui.io().framerate;
+        imgui.io_mut().display_size = [size_pixels.width as _, size_pixels.height as _];
+        imgui.io_mut().delta_time = dt.as_secs() as f32 + dt.subsec_nanos() as f32 * 1e-9;
+        let ui = imgui.frame();
 
-        /*
-        let frame_rate = imgui.get_frame_rate();
-        let ui = imgui.frame(
-            (size_points.width, size_points.height),
-            (size_pixels.width, size_pixels.height),
-            dt.as_secs() as f32 + dt.subsec_nanos() as f32 * 1e-9,
-        );
-
-        ui.window(im_str!("Graphics options"))
+        imgui::Window::new(im_str!("Graphics options"))
             .resizable(true)
             .collapsible(true)
             .movable(true)
-            .size((300.0, 100.0), imgui::ImGuiCond::FirstUseEver)
-            .build(|| {
-                ui.slider_int(im_str!("Maximum number of steps"), &mut steps, 0, 400)
-                    .build();
-                ui.slider_float(im_str!("Step size"), &mut dx, 0.0, 0.05)
-                    .build();
-                ui.slider_float(im_str!("Gamma factor"), &mut gamma, 0.4, 3.0)
-                    .build();
-                ui.color_edit(im_str!("Background colour"), &mut background)
-                    .build();
+            .size([300.0, 100.0], imgui::Condition::FirstUseEver)
+            .build(&ui, || {
+                imgui::Slider::new(im_str!("Maximum number of steps"), 0..=400)
+                    .build(&ui, &mut steps);
+                imgui::Slider::new(im_str!("Step size"), 0.0..=0.05)
+                    .build(&ui, &mut dx);
+                imgui::Slider::new(im_str!("Gamma factor"), 0.4..=3.0)
+                    .build(&ui, &mut gamma);
+                imgui::ColorEdit::new(im_str!("Background colour"), &mut background).build(&ui);
                 ui.text(im_str!("Projection:"));
                 ui.same_line(0.0);
                 ui.radio_button(im_str!("Perspective"), &mut perspective_selection, 0);
@@ -341,12 +340,7 @@ fn main() {
                 ui.text(&names[selection]);
                 ui.popup(im_str!("Select:"), || {
                     for (index, name) in names.iter().enumerate() {
-                        if ui.selectable(
-                            name,
-                            false,
-                            imgui::ImGuiSelectableFlags::empty(),
-                            imgui::ImVec2::new(0.0, 0.0),
-                        ) {
+                        if imgui::Selectable::new(name).flags(imgui::SelectableFlags::empty()).selected(false).size([0.0, 0.0]).build(&ui) {
                             selection = index;
                         }
                     }
@@ -360,68 +354,35 @@ fn main() {
                 ui.same_line(0.0);
                 ui.radio_button(im_str!("ISO"), &mut mip_or_iso, 1);
 
-                if ui
-                    .collapsing_header(im_str!("Maximum Intensity Projection"))
-                    .build()
-                {
-                    ui.color_edit(im_str!("MIP colour"), &mut mip_colour)
-                        .build();
+                if imgui::CollapsingHeader::new(im_str!("Maximum Intensity Projection")).build(&ui) {
+                    imgui::ColorEdit::new(im_str!("MIP colour"), &mut mip_colour).build(&ui);
                 }
 
-                if ui
-                    .collapsing_header(im_str!("Isosurface Extraction"))
-                    .build()
-                {
-                    ui.slider_float(im_str!("Isovalue"), &mut isovalue, 0.0, 1.0)
-                        .build();
-                    ui.slider_float(
-                        im_str!("Gradient step length"),
-                        &mut grad_step,
-                        0.0,
-                        1.0 / 10.0,
-                    )
-                    .build();
+                if imgui::CollapsingHeader::new(im_str!("Isosurface Extraction")).build(&ui) {
+                    imgui::Slider::new(im_str!("Isovalue"), 0.0..=1.0).build(&ui, &mut isovalue);
+                    imgui::Slider::new(im_str!("Gradient step length"), 0.0..=1.0/10.0).build(&ui, &mut grad_step);
 
                     ui.separator();
 
-                    ui.color_edit(im_str!("Ambient colour"), &mut amb_colour)
-                        .build();
-                    ui.slider_float(im_str!("Ambient strength"), &mut amb_str, 0.0, 1.0)
-                        .build();
+                    imgui::ColorEdit::new(im_str!("Ambient colour"), &mut amb_colour).build(&ui);
+                    imgui::Slider::new(im_str!("Ambient strength"), 0.0..=1.0).build(&ui, &mut amb_str);
 
-                    ui.color_edit(im_str!("Diffuse colour"), &mut dif_colour)
-                        .build();
-                    ui.slider_float(im_str!("Diffuse strength"), &mut dif_str, 0.0, 1.0)
-                        .build();
+                    imgui::ColorEdit::new(im_str!("Diffuse colour"), &mut dif_colour).build(&ui);
+                    imgui::Slider::new(im_str!("Diffuse strength"), 0.0..=1.0).build(&ui, &mut dif_str);
 
-                    ui.color_edit(im_str!("Specular colour"), &mut spe_colour)
-                        .build();
-                    ui.slider_float(im_str!("Specular strength"), &mut spe_str, 0.0, 0.03)
-                        .build();
-                    ui.slider_float(im_str!("Specular alpha"), &mut alpha, 10.0, 900.0)
-                        .build();
+                    imgui::ColorEdit::new(im_str!("Specular colour"), &mut spe_colour).build(&ui);
+                    imgui::Slider::new(im_str!("Specular strength"),0.0..=0.03).build(&ui, &mut spe_str);
+                    imgui::Slider::new(im_str!("Specular alpha"), 10.0..=900.0).build(&ui, &mut alpha);
 
                     ui.separator();
 
-                    ui.slider_float(
-                        im_str!("Light vector theta"),
-                        &mut light[0],
-                        0.0,
-                        std::f32::consts::PI,
-                    )
-                    .build();
-                    ui.slider_float(
-                        im_str!("Light vector phi"),
-                        &mut light[1],
-                        0.0,
-                        2.0 * std::f32::consts::PI,
-                    )
-                    .build();
+                    imgui::Slider::new(im_str!("Light vector theta"), 0.0..=std::f32::consts::PI).build(&ui, &mut light[0]);
+                    imgui::Slider::new(im_str!("Light vector phi"), 0.0..=2.0 * std::f32::consts::PI).build(&ui, &mut light[1]);
                 }
             });
-        */
 
-        // TODO renderer.render(&mut target, ui).unwrap();
+        let draw_data = ui.render();
+        renderer.render(&mut target, draw_data).unwrap();
 
         target.finish().unwrap();
     })
