@@ -17,7 +17,7 @@ pub struct Support {
     mouse_wheel: f32,
     pub orthographic: cgmath::Ortho<f32>,
     pub perspective: cgmath::PerspectiveFov<f32>,
-    pub arcball_camera: arcball::ArcballCamera,
+    pub arcball_camera: arcball::ArcballCamera<f32>,
 }
 
 impl Support {
@@ -51,14 +51,11 @@ impl Support {
                 near: znear,
                 far: zfar,
             },
-            arcball_camera: {
-                let look_at = cgmath::Matrix4::look_at(
-                    cgmath::Point3::new(0.0, 0.0, 3.0),
-                    cgmath::Point3::new(0.0, 0.0, 0.0),
-                    cgmath::Vector3::new(0.0, 1.0, 0.0),
-                );
-                arcball::ArcballCamera::new(&look_at, 0.05, 4.0, [w as f32, h as f32])
-            },
+            arcball_camera: arcball::ArcballCamera::new(
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                4.0,
+                [w as f32, h as f32],
+            ),
         }
     }
     pub fn handle(&mut self, ev: Event) -> bool {

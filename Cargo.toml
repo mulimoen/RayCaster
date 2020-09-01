@@ -5,8 +5,8 @@ authors = ["Magnus Ulimoen <flymagnus@gmail.com>"]
 
 [dependencies]
 glium = "*"
-cgmath = "*"
+cgmath = "0.17.0"
 imgui = { git = "https://github.com/Gekkio/imgui-rs" }
 imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs" }
 vtk-parser = { path = "VTKparser" }
-arcball = "*"
+arcball = "1.0.0"
