@@ -130,29 +130,47 @@ fn main() {
         (volume_tex, names)
     };
 
-    let mut steps: i32 = 200;
-    let mut dx: f32 = 0.01;
-    let mut background: [f32; 3] = [0.0, 0.0, 0.0];
+    struct State {
+        steps: i32,
+        dx: f32,
+        background: [f32; 3],
+        selection: usize,
+        noise: bool,
+        gamma: f32,
+        mip_or_iso: i32,
+        mip_colour: [f32; 3],
+        isovalue: f32,
+        amb_colour: [f32; 3],
+        amb_str: f32,
+        dif_colour: [f32; 3],
+        dif_str: f32,
+        spe_colour: [f32; 3],
+        spe_str: f32,
+        alpha: f32,
+        light: [f32; 2],
+        grad_step: f32,
+    }
 
-    let mut selection: usize = 0;
-    let mut noise: bool = true;
-    let mut gamma: f32 = 2.2;
-
-    let mut mip_or_iso: i32 = 0;
-
-    let mut mip_colour: [f32; 3] = [1.0, 1.0, 1.0];
-
-    let mut isovalue: f32 = 0.3;
-    let mut amb_colour: [f32; 3] = [1.0, 0.0, 0.0];
-    let mut amb_str: f32 = 0.1;
-    let mut dif_colour: [f32; 3] = [1.0, 0.0, 0.0];
-    let mut dif_str: f32 = 1.0;
-    let mut spe_colour: [f32; 3] = [1.0, 1.0, 1.0];
-    let mut spe_str: f32 = 0.005;
-    let mut alpha: f32 = 300.0;
-
-    let mut light: [f32; 2] = [std::f32::consts::PI / 2.0, 0.0];
-    let mut grad_step: f32 = 5.0 / 256.0;
+    let mut state = State {
+        steps: 200,
+        dx: 0.01,
+        background: [0.0, 0.0, 0.0],
+        selection: 0,
+        noise: true,
+        gamma: 2.2,
+        mip_or_iso: 0,
+        mip_colour: [1.0, 1.0, 1.0],
+        isovalue: 0.3,
+        amb_colour: [1.0, 0.0, 0.0],
+        amb_str: 0.1,
+        dif_colour: [1.0, 0.0, 0.0],
+        dif_str: 1.0,
+        spe_colour: [1.0, 1.0, 1.0],
+        spe_str: 0.005,
+        alpha: 300.0,
+        light: [std::f32::consts::PI / 2.0, 0.0],
+        grad_step: 5.0 / 256.0,
+    };
 
     let (width, height) = display.get_framebuffer_dimensions();
 
@@ -249,7 +267,7 @@ fn main() {
             .unwrap();
 
         let mut target = display.draw();
-        target.clear_color_and_depth((background[0], background[1], background[2], 0.0), 1.0);
+        target.clear_color_and_depth((state.background[0], state.background[1], state.background[2], 0.0), 1.0);
 
         let params = glium::DrawParameters {
             blend: glium::Blend {
@@ -262,27 +280,27 @@ fn main() {
         let uniforms = uniform! {
             u_back : &backface_tex,
             u_front: &frontface_tex,
-            u_volume: volume_tex[selection].sampled().wrap_function(glium::uniforms::SamplerWrapFunction::Clamp).magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
+            u_volume: volume_tex[state.selection].sampled().wrap_function(glium::uniforms::SamplerWrapFunction::Clamp).magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
             u_noise: &noise_tex,
-            u_use_noise: noise,
-            u_gamma: gamma,
+            u_use_noise: state.noise,
+            u_gamma: state.gamma,
 
-            u_steps: steps,
-            u_colour: mip_colour,
-            u_dx: dx,
-            u_mode: mip_or_iso,
+            u_steps: state.steps,
+            u_colour: state.mip_colour,
+            u_dx: state.dx,
+            u_mode: state.mip_or_iso,
 
-            u_iso: isovalue,
-            u_dr: grad_step,
+            u_iso: state.isovalue,
+            u_dr: state.grad_step,
 
-            u_ambient: amb_colour,
-            u_amb_str: amb_str,
-            u_diffuse: dif_colour,
-            u_dif_str: dif_str,
-            u_specular: spe_colour,
-            u_spe_str: spe_str,
-            u_alpha: alpha,
-            u_L: [light[0].sin()*light[1].cos(), light[0].sin()*light[0].sin(), light[0].cos()]
+            u_ambient: state.amb_colour,
+            u_amb_str: state.amb_str,
+            u_diffuse: state.dif_colour,
+            u_dif_str: state.dif_str,
+            u_specular: state.spe_colour,
+            u_spe_str: state.spe_str,
+            u_alpha: state.alpha,
+            u_L: [state.light[0].sin()*state.light[1].cos(), state.light[0].sin()*state.light[0].sin(), state.light[0].cos()]
         };
 
         target
@@ -307,12 +325,12 @@ fn main() {
             .size([300.0, 100.0], imgui::Condition::FirstUseEver)
             .build(&ui, || {
                 imgui::Slider::new(im_str!("Maximum number of steps"), 0..=400)
-                    .build(&ui, &mut steps);
+                    .build(&ui, &mut state.steps);
                 imgui::Slider::new(im_str!("Step size"), 0.0..=0.05)
-                    .build(&ui, &mut dx);
+                    .build(&ui, &mut state.dx);
                 imgui::Slider::new(im_str!("Gamma factor"), 0.4..=3.0)
-                    .build(&ui, &mut gamma);
-                imgui::ColorEdit::new(im_str!("Background colour"), &mut background).build(&ui);
+                    .build(&ui, &mut state.gamma);
+                imgui::ColorEdit::new(im_str!("Background colour"), &mut state.background).build(&ui);
                 ui.text(im_str!("Projection:"));
                 ui.same_line(0.0);
                 ui.radio_button(im_str!("Perspective"), &mut perspective_selection, 0);
@@ -320,17 +338,17 @@ fn main() {
                 ui.radio_button(im_str!("Orthographic"), &mut perspective_selection, 1);
 
                 ui.checkbox(im_str!("Lock camera"), &mut input.camera_lock);
-                ui.checkbox(im_str!("Use noise texture"), &mut noise);
+                ui.checkbox(im_str!("Use noise texture"), &mut state.noise);
 
                 if ui.small_button(im_str!("Volume dataset:")) {
                     ui.open_popup(im_str!("Select:"));
                 }
                 ui.same_line(0.0);
-                ui.text(&names[selection]);
+                ui.text(&names[state.selection]);
                 ui.popup(im_str!("Select:"), || {
                     for (index, name) in names.iter().enumerate() {
                         if imgui::Selectable::new(name).flags(imgui::SelectableFlags::empty()).selected(false).size([0.0, 0.0]).build(&ui) {
-                            selection = index;
+                            state.selection = index;
                         }
                     }
                 });
@@ -339,34 +357,34 @@ fn main() {
 
                 ui.text(im_str!("Select projection mode:"));
                 ui.same_line(0.0);
-                ui.radio_button(im_str!("MIP"), &mut mip_or_iso, 0);
+                ui.radio_button(im_str!("MIP"), &mut state.mip_or_iso, 0);
                 ui.same_line(0.0);
-                ui.radio_button(im_str!("ISO"), &mut mip_or_iso, 1);
+                ui.radio_button(im_str!("ISO"), &mut state.mip_or_iso, 1);
 
                 if imgui::CollapsingHeader::new(im_str!("Maximum Intensity Projection")).build(&ui) {
-                    imgui::ColorEdit::new(im_str!("MIP colour"), &mut mip_colour).build(&ui);
+                    imgui::ColorEdit::new(im_str!("MIP colour"), &mut state.mip_colour).build(&ui);
                 }
 
                 if imgui::CollapsingHeader::new(im_str!("Isosurface Extraction")).build(&ui) {
-                    imgui::Slider::new(im_str!("Isovalue"), 0.0..=1.0).build(&ui, &mut isovalue);
-                    imgui::Slider::new(im_str!("Gradient step length"), 0.0..=1.0/10.0).build(&ui, &mut grad_step);
+                    imgui::Slider::new(im_str!("Isovalue"), 0.0..=1.0).build(&ui, &mut state.isovalue);
+                    imgui::Slider::new(im_str!("Gradient step length"), 0.0..=1.0/10.0).build(&ui, &mut state.grad_step);
 
                     ui.separator();
 
-                    imgui::ColorEdit::new(im_str!("Ambient colour"), &mut amb_colour).build(&ui);
-                    imgui::Slider::new(im_str!("Ambient strength"), 0.0..=1.0).build(&ui, &mut amb_str);
+                    imgui::ColorEdit::new(im_str!("Ambient colour"), &mut state.amb_colour).build(&ui);
+                    imgui::Slider::new(im_str!("Ambient strength"), 0.0..=1.0).build(&ui, &mut state.amb_str);
 
-                    imgui::ColorEdit::new(im_str!("Diffuse colour"), &mut dif_colour).build(&ui);
-                    imgui::Slider::new(im_str!("Diffuse strength"), 0.0..=1.0).build(&ui, &mut dif_str);
+                    imgui::ColorEdit::new(im_str!("Diffuse colour"), &mut state.dif_colour).build(&ui);
+                    imgui::Slider::new(im_str!("Diffuse strength"), 0.0..=1.0).build(&ui, &mut state.dif_str);
 
-                    imgui::ColorEdit::new(im_str!("Specular colour"), &mut spe_colour).build(&ui);
-                    imgui::Slider::new(im_str!("Specular strength"),0.0..=0.03).build(&ui, &mut spe_str);
-                    imgui::Slider::new(im_str!("Specular alpha"), 10.0..=900.0).build(&ui, &mut alpha);
+                    imgui::ColorEdit::new(im_str!("Specular colour"), &mut state.spe_colour).build(&ui);
+                    imgui::Slider::new(im_str!("Specular strength"),0.0..=0.03).build(&ui, &mut state.spe_str);
+                    imgui::Slider::new(im_str!("Specular alpha"), 10.0..=900.0).build(&ui, &mut state.alpha);
 
                     ui.separator();
 
-                    imgui::Slider::new(im_str!("Light vector theta"), 0.0..=std::f32::consts::PI).build(&ui, &mut light[0]);
-                    imgui::Slider::new(im_str!("Light vector phi"), 0.0..=2.0 * std::f32::consts::PI).build(&ui, &mut light[1]);
+                    imgui::Slider::new(im_str!("Light vector theta"), 0.0..=std::f32::consts::PI).build(&ui, &mut state.light[0]);
+                    imgui::Slider::new(im_str!("Light vector phi"), 0.0..=2.0 * std::f32::consts::PI).build(&ui, &mut state.light[1]);
                 }
             });
 
