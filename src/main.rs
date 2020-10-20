@@ -12,11 +12,11 @@ mod support;
 
 fn main() {
     let events_loop = glium::glutin::event_loop::EventLoop::new();
-    let window = glium::glutin::window::WindowBuilder::new();
+    let builder = glium::glutin::window::WindowBuilder::new();
     let context = glium::glutin::ContextBuilder::new()
         .with_vsync(true)
         .with_depth_buffer(24);
-    let display = glium::Display::new(window, context, &events_loop).unwrap();
+    let display = glium::Display::new(builder, context, &events_loop).unwrap();
 
     let cube_pos = VertexBuffer::new(&display, &cube::VERTICES).unwrap();
 
@@ -181,13 +181,20 @@ fn main() {
     let mut perspective_selection = 0;
 
     let mut imgui = imgui::Context::create();
-    imgui.io_mut().mouse_pos = [0.0, 0.0];
+    let mut platform = imgui_winit_support::WinitPlatform::init(&mut imgui);
 
+    {
+        use imgui_winit_support::HiDpiMode;
+        let gl_window = display.gl_window();
+        let window = gl_window.window();
+        platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Rounded);
+    }
     let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
 
     let mut last_frame = std::time::Instant::now();
 
     events_loop.run(move |ev, _, cf| {
+        //use glium::glutin::event::*;
         if input.handle(ev, cf) {
             return
         }
@@ -324,11 +331,11 @@ fn main() {
             .movable(true)
             .size([300.0, 100.0], imgui::Condition::FirstUseEver)
             .build(&ui, || {
-                imgui::Slider::new(im_str!("Maximum number of steps"), 0..=400)
+                imgui::Slider::new(im_str!("Maximum number of steps")).range(0..=400)
                     .build(&ui, &mut state.steps);
-                imgui::Slider::new(im_str!("Step size"), 0.0..=0.05)
+                imgui::Slider::new(im_str!("Step size")).range( 0.0..=0.05)
                     .build(&ui, &mut state.dx);
-                imgui::Slider::new(im_str!("Gamma factor"), 0.4..=3.0)
+                imgui::Slider::new(im_str!("Gamma factor")).range( 0.4..=3.0)
                     .build(&ui, &mut state.gamma);
                 imgui::ColorEdit::new(im_str!("Background colour"), &mut state.background).build(&ui);
                 ui.text(im_str!("Projection:"));
@@ -366,25 +373,25 @@ fn main() {
                 }
 
                 if imgui::CollapsingHeader::new(im_str!("Isosurface Extraction")).build(&ui) {
-                    imgui::Slider::new(im_str!("Isovalue"), 0.0..=1.0).build(&ui, &mut state.isovalue);
-                    imgui::Slider::new(im_str!("Gradient step length"), 0.0..=1.0/10.0).build(&ui, &mut state.grad_step);
+                    imgui::Slider::new(im_str!("Isovalue")).range( 0.0..=1.0).build(&ui, &mut state.isovalue);
+                    imgui::Slider::new(im_str!("Gradient step length")).range(0.0..=1.0/10.0).build(&ui, &mut state.grad_step);
 
                     ui.separator();
 
                     imgui::ColorEdit::new(im_str!("Ambient colour"), &mut state.amb_colour).build(&ui);
-                    imgui::Slider::new(im_str!("Ambient strength"), 0.0..=1.0).build(&ui, &mut state.amb_str);
+                    imgui::Slider::new(im_str!("Ambient strength")).range( 0.0..=1.0).build(&ui, &mut state.amb_str);
 
                     imgui::ColorEdit::new(im_str!("Diffuse colour"), &mut state.dif_colour).build(&ui);
-                    imgui::Slider::new(im_str!("Diffuse strength"), 0.0..=1.0).build(&ui, &mut state.dif_str);
+                    imgui::Slider::new(im_str!("Diffuse strength")).range( 0.0..=1.0).build(&ui, &mut state.dif_str);
 
                     imgui::ColorEdit::new(im_str!("Specular colour"), &mut state.spe_colour).build(&ui);
-                    imgui::Slider::new(im_str!("Specular strength"),0.0..=0.03).build(&ui, &mut state.spe_str);
-                    imgui::Slider::new(im_str!("Specular alpha"), 10.0..=900.0).build(&ui, &mut state.alpha);
+                    imgui::Slider::new(im_str!("Specular strength")).range(0.0..=0.03).build(&ui, &mut state.spe_str);
+                    imgui::Slider::new(im_str!("Specular alpha")).range( 10.0..=900.0).build(&ui, &mut state.alpha);
 
                     ui.separator();
 
-                    imgui::Slider::new(im_str!("Light vector theta"), 0.0..=std::f32::consts::PI).build(&ui, &mut state.light[0]);
-                    imgui::Slider::new(im_str!("Light vector phi"), 0.0..=2.0 * std::f32::consts::PI).build(&ui, &mut state.light[1]);
+                    imgui::Slider::new(im_str!("Light vector theta")).range(0.0..=std::f32::consts::PI).build(&ui, &mut state.light[0]);
+                    imgui::Slider::new(im_str!("Light vector phi")).range(0.0..=2.0 * std::f32::consts::PI).build(&ui, &mut state.light[1]);
                 }
             });
 

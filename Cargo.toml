@@ -7,10 +7,11 @@ edition = "2018"
 [dependencies]
 glium = "0.27.0"
 cgmath = "0.17.0"
-imgui = "0.4.0"
-imgui-glium-renderer = "0.4.0"
+imgui = "0.5.0"
+imgui-glium-renderer = "0.5.0"
 vtk-parser = { path = "VTKparser" }
 arcball = "1.0.0"
+imgui-winit-support = "0.5.0"
 
 [workspace]
 members = [".", "VTKparser"]
