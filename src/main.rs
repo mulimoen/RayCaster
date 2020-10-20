@@ -172,9 +172,10 @@ fn main() {
             }
             Event::MainEventsCleared => {
                 let gl_window = display.gl_window();
-                platform.prepare_frame(imgui.io_mut(), &gl_window.window()).unwrap();
+                platform
+                    .prepare_frame(imgui.io_mut(), &gl_window.window())
+                    .unwrap();
                 gl_window.window().request_redraw();
-
             }
             Event::RedrawRequested(_) => {
                 let mut backface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
@@ -183,12 +184,13 @@ fn main() {
                     &depth_buffers.backface,
                 )
                 .unwrap();
-                let mut frontface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-                    &display,
-                    &textures.frontface,
-                    &depth_buffers.frontface,
-                )
-                .unwrap();
+                let mut frontface_buffer =
+                    glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+                        &display,
+                        &textures.frontface,
+                        &depth_buffers.frontface,
+                    )
+                    .unwrap();
 
                 let view = camera.view_matrix();
 
@@ -202,7 +204,8 @@ fn main() {
                 backface_buffer.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 0.0);
 
                 let params = glium::DrawParameters {
-                    backface_culling: glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
+                    backface_culling:
+                        glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
                     depth: glium::draw_parameters::Depth {
                         test: glium::draw_parameters::DepthTest::IfMore,
                         write: true,
@@ -242,7 +245,15 @@ fn main() {
                     .unwrap();
 
                 let mut target = display.draw();
-                target.clear_color_and_depth((state.background[0], state.background[1], state.background[2], 0.0), 1.0);
+                target.clear_color_and_depth(
+                    (
+                        state.background[0],
+                        state.background[1],
+                        state.background[2],
+                        0.0,
+                    ),
+                    1.0,
+                );
 
                 let params = glium::DrawParameters {
                     blend: glium::Blend {
@@ -296,7 +307,10 @@ fn main() {
 
                 target.finish().unwrap();
             }
-            Event::WindowEvent { event: glium::glutin::event::WindowEvent::CloseRequested, .. } => {
+            Event::WindowEvent {
+                event: glium::glutin::event::WindowEvent::CloseRequested,
+                ..
+            } => {
                 *cf = glium::glutin::event_loop::ControlFlow::Exit;
             }
             event => {

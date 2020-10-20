@@ -1,8 +1,6 @@
 extern crate vtk_parser;
 
-
 fn main() {
-
     let data = vtk_parser::read_file("tooth.vtk");
 
     let data = data.unwrap();
@@ -28,6 +26,4 @@ fn main() {
     assert_eq!(data.spacing, (1.0, 1.0, 1.0));
 
     //assert_eq!(data.data.len(), 1558802);
-
-
 }
