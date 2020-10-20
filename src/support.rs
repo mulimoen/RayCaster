@@ -2,7 +2,7 @@ use glium::glutin::event::ElementState::Pressed;
 use glium::glutin::event::Event;
 use glium::glutin::event::MouseButton;
 
-pub struct Support {
+pub struct Camera {
     pressed: (bool, bool, bool),
     mouse_pressed: [bool; 2],
     prev_mouse: (i32, i32),
@@ -13,9 +13,9 @@ pub struct Support {
     pub arcball_camera: arcball::ArcballCamera<f32>,
 }
 
-impl Support {
-    pub fn new(w: u32, h: u32, znear: f32, zfar: f32) -> Support {
-        Support {
+impl Camera {
+    pub fn new(w: u32, h: u32, znear: f32, zfar: f32) -> Self {
+        Self {
             pressed: (false, false, false),
             mouse_pressed: [false, false],
             prev_mouse: (0, 0),
@@ -130,4 +130,123 @@ impl Support {
     pub fn view_matrix(&self) -> cgmath::Matrix4<f32> {
         self.arcball_camera.get_mat4()
     }
+}
+pub struct State {
+    pub steps: i32,
+    pub dx: f32,
+    pub background: [f32; 3],
+    pub selection: usize,
+    pub noise: bool,
+    pub gamma: f32,
+    pub mip_or_iso: i32,
+    pub mip_colour: [f32; 3],
+    pub isovalue: f32,
+    pub amb_colour: [f32; 3],
+    pub amb_str: f32,
+    pub dif_colour: [f32; 3],
+    pub dif_str: f32,
+    pub spe_colour: [f32; 3],
+    pub spe_str: f32,
+    pub alpha: f32,
+    pub light: [f32; 2],
+    pub grad_step: f32,
+    pub perspective_selection: usize,
+    pub frame_rate: f32,
+}
+
+pub fn gui(ui: &imgui::Ui, state: &mut State, camera: &mut Camera, names: &[imgui::ImString]) {
+    use imgui::im_str;
+    imgui::Window::new(im_str!("Graphics options"))
+        .resizable(true)
+        .collapsible(true)
+        .movable(true)
+        .size([300.0, 100.0], imgui::Condition::FirstUseEver)
+        .build(&ui, || {
+            imgui::Slider::new(im_str!("Maximum number of steps"))
+                .range(0..=400)
+                .build(&ui, &mut state.steps);
+            imgui::Slider::new(im_str!("Step size"))
+                .range(0.0..=0.05)
+                .build(&ui, &mut state.dx);
+            imgui::Slider::new(im_str!("Gamma factor"))
+                .range(0.4..=3.0)
+                .build(&ui, &mut state.gamma);
+            imgui::ColorEdit::new(im_str!("Background colour"), &mut state.background).build(&ui);
+            ui.text(im_str!("Projection:"));
+            ui.same_line(0.0);
+            ui.radio_button(im_str!("Perspective"), &mut state.perspective_selection, 0);
+            ui.same_line(0.0);
+            ui.radio_button(im_str!("Orthographic"), &mut state.perspective_selection, 1);
+
+            ui.checkbox(im_str!("Lock camera"), &mut camera.camera_lock);
+            ui.checkbox(im_str!("Use noise texture"), &mut state.noise);
+
+            if ui.small_button(im_str!("Volume dataset:")) {
+                ui.open_popup(im_str!("Select:"));
+            }
+            ui.same_line(0.0);
+            ui.text(&names[state.selection]);
+            ui.popup(im_str!("Select:"), || {
+                for (index, name) in names.iter().enumerate() {
+                    if imgui::Selectable::new(name)
+                        .flags(imgui::SelectableFlags::empty())
+                        .selected(false)
+                        .size([0.0, 0.0])
+                        .build(&ui)
+                    {
+                        state.selection = index;
+                    }
+                }
+            });
+
+            ui.text(im_str!("Framerate: {:.2}", state.frame_rate));
+
+            ui.text(im_str!("Select projection mode:"));
+            ui.same_line(0.0);
+            ui.radio_button(im_str!("MIP"), &mut state.mip_or_iso, 0);
+            ui.same_line(0.0);
+            ui.radio_button(im_str!("ISO"), &mut state.mip_or_iso, 1);
+
+            if imgui::CollapsingHeader::new(im_str!("Maximum Intensity Projection")).build(&ui) {
+                imgui::ColorEdit::new(im_str!("MIP colour"), &mut state.mip_colour).build(&ui);
+            }
+
+            if imgui::CollapsingHeader::new(im_str!("Isosurface Extraction")).build(&ui) {
+                imgui::Slider::new(im_str!("Isovalue"))
+                    .range(0.0..=1.0)
+                    .build(&ui, &mut state.isovalue);
+                imgui::Slider::new(im_str!("Gradient step length"))
+                    .range(0.0..=1.0 / 10.0)
+                    .build(&ui, &mut state.grad_step);
+
+                ui.separator();
+
+                imgui::ColorEdit::new(im_str!("Ambient colour"), &mut state.amb_colour).build(&ui);
+                imgui::Slider::new(im_str!("Ambient strength"))
+                    .range(0.0..=1.0)
+                    .build(&ui, &mut state.amb_str);
+
+                imgui::ColorEdit::new(im_str!("Diffuse colour"), &mut state.dif_colour).build(&ui);
+                imgui::Slider::new(im_str!("Diffuse strength"))
+                    .range(0.0..=1.0)
+                    .build(&ui, &mut state.dif_str);
+
+                imgui::ColorEdit::new(im_str!("Specular colour"), &mut state.spe_colour).build(&ui);
+                imgui::Slider::new(im_str!("Specular strength"))
+                    .range(0.0..=0.03)
+                    .build(&ui, &mut state.spe_str);
+                imgui::Slider::new(im_str!("Specular alpha"))
+                    .range(10.0..=900.0)
+                    .build(&ui, &mut state.alpha);
+
+                ui.separator();
+
+                imgui::Slider::new(im_str!("Light vector theta"))
+                    .range(0.0..=std::f32::consts::PI)
+                    .build(&ui, &mut state.light[0]);
+                imgui::Slider::new(im_str!("Light vector phi"))
+                    .range(0.0..=2.0 * std::f32::consts::PI)
+                    .build(&ui, &mut state.light[1]);
+            }
+        });
 }

@@ -3,7 +3,6 @@ use glium::{
     texture::{Texture2d, Texture3d},
     uniform, IndexBuffer, Program, Surface, VertexBuffer,
 };
-use imgui::im_str;
 use imgui_glium_renderer::Renderer;
 
 mod cube;
@@ -130,28 +129,7 @@ fn main() {
         (volume_tex, names)
     };
 
-    struct State {
-        steps: i32,
-        dx: f32,
-        background: [f32; 3],
-        selection: usize,
-        noise: bool,
-        gamma: f32,
-        mip_or_iso: i32,
-        mip_colour: [f32; 3],
-        isovalue: f32,
-        amb_colour: [f32; 3],
-        amb_str: f32,
-        dif_colour: [f32; 3],
-        dif_str: f32,
-        spe_colour: [f32; 3],
-        spe_str: f32,
-        alpha: f32,
-        light: [f32; 2],
-        grad_step: f32,
-    }
-
-    let mut state = State {
+    let mut state = support::State {
         steps: 200,
         dx: 0.01,
         background: [0.0, 0.0, 0.0],
@@ -170,15 +148,15 @@ fn main() {
         alpha: 300.0,
         light: [std::f32::consts::PI / 2.0, 0.0],
         grad_step: 5.0 / 256.0,
+        perspective_selection: 0,
+        frame_rate: 0.0,
     };
 
     let (width, height) = display.get_framebuffer_dimensions();
 
     let znear = 0.1;
     let zfar = 10.0;
-    let mut camera = support::Support::new(width, height, znear, zfar);
-
-    let mut perspective_selection = 0;
+    let mut camera = support::Camera::new(width, height, znear, zfar);
 
     let mut imgui = imgui::Context::create();
     let mut platform = imgui_winit_support::WinitPlatform::init(&mut imgui);
@@ -223,7 +201,7 @@ fn main() {
 
                 let view = camera.view_matrix();
 
-                let projection: Matrix4<f32> = if perspective_selection == 1 {
+                let projection: Matrix4<f32> = if state.perspective_selection == 1 {
                     camera.orthographic.into()
                 } else {
                     camera.perspective.into()
@@ -315,78 +293,11 @@ fn main() {
 
                 // Dear ImGui related
                 let frame_rate = imgui.io().framerate;
+                state.frame_rate = frame_rate;
                 let ui = imgui.frame();
                 let gl_window = display.gl_window();
 
-                imgui::Window::new(im_str!("Graphics options"))
-                    .resizable(true)
-                    .collapsible(true)
-                    .movable(true)
-                    .size([300.0, 100.0], imgui::Condition::FirstUseEver)
-                    .build(&ui, || {
-                        imgui::Slider::new(im_str!("Maximum number of steps")).range(0..=400)
-                            .build(&ui, &mut state.steps);
-                        imgui::Slider::new(im_str!("Step size")).range( 0.0..=0.05)
-                            .build(&ui, &mut state.dx);
-                        imgui::Slider::new(im_str!("Gamma factor")).range( 0.4..=3.0)
-                            .build(&ui, &mut state.gamma);
-                        imgui::ColorEdit::new(im_str!("Background colour"), &mut state.background).build(&ui);
-                        ui.text(im_str!("Projection:"));
-                        ui.same_line(0.0);
-                        ui.radio_button(im_str!("Perspective"), &mut perspective_selection, 0);
-                        ui.same_line(0.0);
-                        ui.radio_button(im_str!("Orthographic"), &mut perspective_selection, 1);
-
-                        ui.checkbox(im_str!("Lock camera"), &mut camera.camera_lock);
-                        ui.checkbox(im_str!("Use noise texture"), &mut state.noise);
-
-                        if ui.small_button(im_str!("Volume dataset:")) {
-                            ui.open_popup(im_str!("Select:"));
-                        }
-                        ui.same_line(0.0);
-                        ui.text(&names[state.selection]);
-                        ui.popup(im_str!("Select:"), || {
-                            for (index, name) in names.iter().enumerate() {
-                                if imgui::Selectable::new(name).flags(imgui::SelectableFlags::empty()).selected(false).size([0.0, 0.0]).build(&ui) {
-                                    state.selection = index;
-                                }
-                            }
-                        });
-
-                        ui.text(im_str!("Framerate: {:.2}", frame_rate));
-
-                        ui.text(im_str!("Select projection mode:"));
-                        ui.same_line(0.0);
-                        ui.radio_button(im_str!("MIP"), &mut state.mip_or_iso, 0);
-                        ui.same_line(0.0);
-                        ui.radio_button(im_str!("ISO"), &mut state.mip_or_iso, 1);
-
-                        if imgui::CollapsingHeader::new(im_str!("Maximum Intensity Projection")).build(&ui) {
-                            imgui::ColorEdit::new(im_str!("MIP colour"), &mut state.mip_colour).build(&ui);
-                        }
-
-                        if imgui::CollapsingHeader::new(im_str!("Isosurface Extraction")).build(&ui) {
-                            imgui::Slider::new(im_str!("Isovalue")).range( 0.0..=1.0).build(&ui, &mut state.isovalue);
-                            imgui::Slider::new(im_str!("Gradient step length")).range(0.0..=1.0/10.0).build(&ui, &mut state.grad_step);
-
-                            ui.separator();
-
-                            imgui::ColorEdit::new(im_str!("Ambient colour"), &mut state.amb_colour).build(&ui);
-                            imgui::Slider::new(im_str!("Ambient strength")).range( 0.0..=1.0).build(&ui, &mut state.amb_str);
-
-                            imgui::ColorEdit::new(im_str!("Diffuse colour"), &mut state.dif_colour).build(&ui);
-                            imgui::Slider::new(im_str!("Diffuse strength")).range( 0.0..=1.0).build(&ui, &mut state.dif_str);
-
-                            imgui::ColorEdit::new(im_str!("Specular colour"), &mut state.spe_colour).build(&ui);
-                            imgui::Slider::new(im_str!("Specular strength")).range(0.0..=0.03).build(&ui, &mut state.spe_str);
-                            imgui::Slider::new(im_str!("Specular alpha")).range( 10.0..=900.0).build(&ui, &mut state.alpha);
-
-                            ui.separator();
-
-                            imgui::Slider::new(im_str!("Light vector theta")).range(0.0..=std::f32::consts::PI).build(&ui, &mut state.light[0]);
-                            imgui::Slider::new(im_str!("Light vector phi")).range(0.0..=2.0 * std::f32::consts::PI).build(&ui, &mut state.light[1]);
-                        }
-                    });
+                support::gui(&ui, &mut state, &mut camera, &names);
 
                 platform.prepare_render(&ui, gl_window.window());
                 let draw_data = ui.render();
