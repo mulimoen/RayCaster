@@ -44,54 +44,66 @@ fn main() {
         Program::from_source(&display, raycast::VERT_SHADER, raycast::FRAG_SHADER, None)
             .expect("Could not compile fragment shader");
 
-    let backface_tex = Texture2d::empty_with_format(
-        &display,
-        glium::texture::UncompressedFloatFormat::F32F32F32F32,
-        glium::texture::MipmapsOption::NoMipmap,
-        1024,
-        1024,
-    )
-    .unwrap();
+    struct Textures {
+        backface: Texture2d,
+        frontface: Texture2d,
+        noise: Texture2d,
+    }
 
-    let depth_tex_back = glium::framebuffer::DepthRenderBuffer::new(
-        &display,
-        glium::texture::DepthFormat::F32,
-        1024,
-        1024,
-    )
-    .unwrap();
-
-    let frontface_tex = Texture2d::empty_with_format(
-        &display,
-        glium::texture::UncompressedFloatFormat::F32F32F32F32,
-        glium::texture::MipmapsOption::NoMipmap,
-        1024,
-        1024,
-    )
-    .unwrap();
-    let depth_tex_front = glium::framebuffer::DepthRenderBuffer::new(
-        &display,
-        glium::texture::DepthFormat::F32,
-        1024,
-        1024,
-    )
-    .unwrap();
-
-    let noise_tex = {
-        let random_bytes = include_bytes!("random.bin").to_vec();
-
-        Texture2d::with_format(
+    let textures = Textures {
+        backface: Texture2d::empty_with_format(
             &display,
-            glium::texture::RawImage2d {
-                data: std::borrow::Cow::Owned(random_bytes),
-                width: 1024,
-                height: 1024,
-                format: glium::texture::ClientFormat::U8,
-            },
-            glium::texture::UncompressedFloatFormat::U8,
+            glium::texture::UncompressedFloatFormat::F32F32F32F32,
             glium::texture::MipmapsOption::NoMipmap,
+            1024,
+            1024,
         )
-        .unwrap()
+        .unwrap(),
+        frontface: Texture2d::empty_with_format(
+            &display,
+            glium::texture::UncompressedFloatFormat::F32F32F32F32,
+            glium::texture::MipmapsOption::NoMipmap,
+            1024,
+            1024,
+        )
+        .unwrap(),
+        noise: {
+            let random_bytes = include_bytes!("random.bin").to_vec();
+
+            Texture2d::with_format(
+                &display,
+                glium::texture::RawImage2d {
+                    data: std::borrow::Cow::Owned(random_bytes),
+                    width: 1024,
+                    height: 1024,
+                    format: glium::texture::ClientFormat::U8,
+                },
+                glium::texture::UncompressedFloatFormat::U8,
+                glium::texture::MipmapsOption::NoMipmap,
+            )
+            .unwrap()
+        },
+    };
+    struct DepthBuffers {
+        frontface: glium::framebuffer::DepthRenderBuffer,
+        backface: glium::framebuffer::DepthRenderBuffer,
+    }
+
+    let depth_buffers = DepthBuffers {
+        backface: glium::framebuffer::DepthRenderBuffer::new(
+            &display,
+            glium::texture::DepthFormat::F32,
+            1024,
+            1024,
+        )
+        .unwrap(),
+        frontface: glium::framebuffer::DepthRenderBuffer::new(
+            &display,
+            glium::texture::DepthFormat::F32,
+            1024,
+            1024,
+        )
+        .unwrap(),
     };
 
     let (volume_tex, names) = {
@@ -188,14 +200,14 @@ fn main() {
             Event::RedrawRequested(_) => {
                 let mut backface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
                     &display,
-                    &backface_tex,
-                    &depth_tex_back,
+                    &textures.backface,
+                    &depth_buffers.backface,
                 )
                 .unwrap();
                 let mut frontface_buffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
                     &display,
-                    &frontface_tex,
-                    &depth_tex_front,
+                    &textures.frontface,
+                    &depth_buffers.frontface,
                 )
                 .unwrap();
 
@@ -262,10 +274,10 @@ fn main() {
                 };
 
                 let uniforms = uniform! {
-                    u_back : &backface_tex,
-                    u_front: &frontface_tex,
+                    u_back : &textures.backface,
+                    u_front: &textures.frontface,
                     u_volume: volume_tex[state.selection].sampled().wrap_function(glium::uniforms::SamplerWrapFunction::Clamp).magnify_filter(glium::uniforms::MagnifySamplerFilter::Linear),
-                    u_noise: &noise_tex,
+                    u_noise: &textures.noise,
                     u_use_noise: state.noise,
                     u_gamma: state.gamma,
 
