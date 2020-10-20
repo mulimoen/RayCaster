@@ -1,8 +1,3 @@
-use arcball;
-use cgmath;
-use glium;
-// use imgui;
-
 use glium::glutin::event::ElementState::Pressed;
 use glium::glutin::event::Event;
 use glium::glutin::event::MouseButton;
@@ -12,9 +7,7 @@ pub struct Support {
     mouse_pressed: [bool; 2],
     prev_mouse: (i32, i32),
     pub camera_lock: bool,
-    keys_pressed: Vec<char>,
     mouse_pos: (i32, i32),
-    mouse_wheel: f32,
     pub orthographic: cgmath::Ortho<f32>,
     pub perspective: cgmath::PerspectiveFov<f32>,
     pub arcball_camera: arcball::ArcballCamera<f32>,
@@ -27,9 +20,7 @@ impl Support {
             mouse_pressed: [false, false],
             prev_mouse: (0, 0),
             camera_lock: false,
-            keys_pressed: Vec::new(),
             mouse_pos: (0, 0),
-            mouse_wheel: 0.0,
             orthographic: {
                 let (ww, hh) = if w > h {
                     (2.0 * w as f32 / h as f32, 2.0)
@@ -58,18 +49,10 @@ impl Support {
             ),
         }
     }
-    pub fn handle(
-        &mut self,
-        ev: Event<()>,
-        cf: &mut glium::glutin::event_loop::ControlFlow,
-    ) -> bool {
+    pub fn handle(&mut self, ev: Event<()>) {
         use glium::glutin::event::WindowEvent::*;
         if let glium::glutin::event::Event::WindowEvent { event, .. } = ev {
             match event {
-                CloseRequested | Destroyed => {
-                    *cf = glium::glutin::event_loop::ControlFlow::Exit;
-                    return true;
-                }
                 MouseInput { state, button, .. } => match button {
                     MouseButton::Left => {
                         self.pressed.0 = state == Pressed;
@@ -105,20 +88,15 @@ impl Support {
                         self.arcball_camera.pan(mouse_delta, 0.16);
                     }
                 }
-                KeyboardInput { input: x, .. } => {
-                    self.keys_pressed.push(x.scancode as u8 as char);
-                }
                 MouseWheel { delta, .. } => {
                     use glium::glutin::event::MouseScrollDelta::*;
                     match delta {
                         LineDelta(_, y) => {
-                            self.mouse_wheel = y;
                             if !self.camera_lock {
                                 self.arcball_camera.zoom(y, 0.16);
                             }
                         }
                         PixelDelta(glium::glutin::dpi::LogicalPosition { x: _, y }) => {
-                            self.mouse_wheel = y as f32;
                             if !self.camera_lock {
                                 self.arcball_camera.zoom(y as f32, 0.16);
                             }
@@ -147,22 +125,6 @@ impl Support {
                 _ => {}
             }
         }
-        return false;
-    }
-
-    fn clear(&mut self) {
-        self.keys_pressed.clear();
-        self.mouse_wheel = 0.0;
-    }
-
-    pub fn pass_to_imgui(&mut self, imgui: &mut imgui::Io) {
-        imgui.mouse_pos = [self.mouse_pos.0 as f32, self.mouse_pos.1 as f32];
-        imgui.mouse_down = [self.pressed.0, self.pressed.1, self.pressed.2, false, false];
-        for e in &self.keys_pressed {
-            imgui.add_input_character(*e);
-        }
-        imgui.mouse_wheel = self.mouse_wheel;
-        self.clear();
     }
 
     pub fn view_matrix(&self) -> cgmath::Matrix4<f32> {
