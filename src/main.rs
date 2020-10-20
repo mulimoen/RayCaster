@@ -141,28 +141,7 @@ fn main() {
         (volume_tex, names)
     };
 
-    let mut state = support::State {
-        steps: 200,
-        dx: 0.01,
-        background: [0.0, 0.0, 0.0],
-        selection: 0,
-        noise: true,
-        gamma: 2.2,
-        mip_or_iso: 0,
-        mip_colour: [1.0, 1.0, 1.0],
-        isovalue: 0.3,
-        amb_colour: [1.0, 0.0, 0.0],
-        amb_str: 0.1,
-        dif_colour: [1.0, 0.0, 0.0],
-        dif_str: 1.0,
-        spe_colour: [1.0, 1.0, 1.0],
-        spe_str: 0.005,
-        alpha: 300.0,
-        light: [std::f32::consts::PI / 2.0, 0.0],
-        grad_step: 5.0 / 256.0,
-        perspective_selection: 0,
-        frame_rate: 0.0,
-    };
+    let mut state = support::State::default();
 
     let (width, height) = display.get_framebuffer_dimensions();
 
